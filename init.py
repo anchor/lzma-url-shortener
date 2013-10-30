@@ -126,6 +126,7 @@ def application(environ, start_response):
                 print '''<p><a href="%s">%s</a></p>''' % (URL, URL)
                 print '''<p>%s</p>''' % URL
                 print "<hr /><p>Shorten again?<br />" + URL_ENTRY_FORM + "</p>"
+                print """<script>window.history.pushState("stateThing", "lzma.so", "/%s");</script>""" % h
                 return output.finalise()
             else:
                 print "<p>Hmm, that one already exists, let's see if it's the same</p>"
@@ -143,6 +144,7 @@ def application(environ, start_response):
                     print '''<p><a href="%s">%s</a></p>''' % (URL, URL)
                     print '''<p>%s</p>''' % URL
                     print "<hr /><p>Shorten again?<br />" + URL_ENTRY_FORM + "</p>"
+                    print """<script>window.history.pushState("stateThing", "lzma.so", "/%s");</script>""" % h
                     return output.finalise()
 
                 CURRENT_URL = URL[0]
@@ -152,6 +154,7 @@ def application(environ, start_response):
                     print '''<p><a href="%s">%s</a></p>''' % (URL, URL)
                     print '''<p>%s</p>''' % URL
                     print "<hr /><p>Shorten again?<br />" + URL_ENTRY_FORM + "</p>"
+                    print """<script>window.history.pushState("stateThing", "lzma.so", "/%s");</script>""" % h
                     return output.finalise()
 
                 print "<p>Damn, a collision, let's try again...</p>"
