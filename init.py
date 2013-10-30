@@ -25,10 +25,18 @@ URL_ENTRY_FORM = """
 class http_response(object):
     def __init__(self, environ, start_response):
         self.buffer = cStringIO.StringIO()
+        self.json_requested = False
+        # This is a hack to hold a single value for JSON output,
+        # we'll return it specifically if we see a JSON-wanting clients.
+        # We don't have a setter function for short_url, boo-friggen-hoo.
+        self.short_url = None
         self.environ = environ
         self.start_response = start_response
         self.status = '200 OK'
         self.headers = [('Content-Type', 'text/html; charset=utf-8'), ('P3P', '''policyref="/w3c/p3p.xml", CP="NOI NOR CURa OUR"''')]
+
+    def request_json(self):
+        self.json_requested = True
 
     def write(self, data):
         self.buffer.write(data)
@@ -40,6 +48,12 @@ class http_response(object):
         """
         self.value = self.buffer.getvalue()
         self.buffer.close()
+
+        if self.json_requested:
+            self.value = """{ "%s": "%s" }""" % ("url", self.short_url)
+            self.headers = [ x for x in self.headers if x[0] != 'Content-Type' ]  # Clean out the Content-Type header
+            self.headers.append(('Content-Type', "application/json"))
+
         self.headers.append(('Content-Length', str(len(self.value))))
         self.start_response(self.status, self.headers)
         return [self.value]
@@ -88,6 +102,12 @@ def application(environ, start_response):
     SHORT = str(form.getfirst("short", ''))
     NEW = str(form.getfirst("new_url", ''))
 
+    # Look for HTTP Accept: header, which non-human clients will use to request JSON output
+    request_accept = environ.get('HTTP_ACCEPT', "")
+    request_accept = [ x for x in request_accept.split(',') if x != '' ]
+    if "application/json" in request_accept:
+        output.request_json()
+
     if SHORT:
         URL_FILE = os.path.join(URL_STORE, SHORT)
         URL = ''
@@ -125,6 +145,7 @@ def application(environ, start_response):
                 print "<p>Okay, here's your URL:</p>"
                 print '''<p><a href="%s">%s</a></p>''' % (URL, URL)
                 print '''<p>%s</p>''' % URL
+                output.short_url = URL
                 print "<hr /><p>Shorten again?<br />" + URL_ENTRY_FORM + "</p>"
                 print """<script>window.history.pushState("stateThing", "lzma.so", "/%s");</script>""" % h
                 return output.finalise()
@@ -143,6 +164,7 @@ def application(environ, start_response):
                     print "<p>Okay, here's your URL:</p>"
                     print '''<p><a href="%s">%s</a></p>''' % (URL, URL)
                     print '''<p>%s</p>''' % URL
+                    output.short_url = URL
                     print "<hr /><p>Shorten again?<br />" + URL_ENTRY_FORM + "</p>"
                     print """<script>window.history.pushState("stateThing", "lzma.so", "/%s");</script>""" % h
                     return output.finalise()
@@ -153,6 +175,7 @@ def application(environ, start_response):
                     print "<p>Okay, no problem here's your URL:</p>"
                     print '''<p><a href="%s">%s</a></p>''' % (URL, URL)
                     print '''<p>%s</p>''' % URL
+                    output.short_url = URL
                     print "<hr /><p>Shorten again?<br />" + URL_ENTRY_FORM + "</p>"
                     print """<script>window.history.pushState("stateThing", "lzma.so", "/%s");</script>""" % h
                     return output.finalise()
