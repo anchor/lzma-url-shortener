@@ -132,9 +132,9 @@ def application(environ, start_response):
         # This can potentially produce a bad URL, eg. percent-encoding crossing the truncation boundary
         NEW = NEW[:MAX_URL_LEN]
 
-	# Forcefully add a schema if the user didn't supply one. Kinda ugly, but practical I think.
-	if re.match(r'[a-z]+:', NEW) is None:
-		NEW = 'http://'+NEW
+        # Forcefully add a schema if the user didn't supply one. Kinda ugly, but practical I think.
+        if re.match(r'[a-z]+:', NEW) is None:
+                NEW = 'http://'+NEW
 
         print '''Your URL is <a href="%s">%s</a><br />''' % (NEW, NEW)
         hasher = hash_machine(NEW)
