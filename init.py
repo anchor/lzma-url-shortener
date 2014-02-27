@@ -14,14 +14,17 @@ os.umask(022)
 # This should probably be obtained from the environment as well
 URL_STEM = 'http://lzma.so/'
 URL_STORE = os.environ.get('URL_STORE')
+# You'll need to override this if your shortener doesn't live at the root of
+# your domain. It's the form-submission target, and needs to hit this app.
+LZMA_ROOT_PATH = os.environ.get('LZMA_ROOT_PATH', '/')
 
 URL_ENTRY_FORM = """
-            <form method="get">
+            <form method="get" action="{0}">
             <label for="url">URL to shorten</label>
             <input type="text" name="new_url" size="60" id="url" accesskey="u" autofocus="autofocus" />
             <input type="submit" value="Shorten!" accesskey="s" />
             </form>
-"""
+""".format(LZMA_ROOT_PATH)
 
 MAX_URL_LEN = 1048576 # 1 MiB should be plenty for even the craziest URLs
 URL_INVALID_CHAR_RE = re.compile(r"[^A-Za-z0-9:;/|=_,.~!*'@(){}$?&%#+-]")
