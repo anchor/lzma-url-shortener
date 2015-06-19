@@ -33,8 +33,9 @@ class http_response(object):
     def __init__(self, environ, start_response):
         self.buffer = cStringIO.StringIO()
         self.json_requested = False
-        # This is a hack to hold a single value for JSON output,
-        # we'll return it specifically if we see a JSON-wanting clients.
+        self.plaintext_requested = False
+        # This is a hack to hold a single value for JSON/plaintext output,
+        # we'll return it specifically if we see JSON-/plaintext-wanting clients.
         # We don't have a setter function for short_url, boo-friggen-hoo.
         self.short_url = None
         self.environ = environ
@@ -44,6 +45,9 @@ class http_response(object):
 
     def request_json(self):
         self.json_requested = True
+
+    def request_plaintext(self):
+        self.plaintext_requested = True
 
     def write(self, data):
         self.buffer.write(data)
@@ -56,7 +60,12 @@ class http_response(object):
         self.value = self.buffer.getvalue()
         self.buffer.close()
 
-        if self.json_requested:
+	# Plaintext is given precedence (if something stupid happens)
+        if self.plaintext_requested:
+            self.value = self.short_url
+            self.headers = [ x for x in self.headers if x[0] != 'Content-Type' ]  # Clean out the Content-Type header
+            self.headers.append(('Content-Type', "text/plain"))
+        elif self.json_requested:
             self.value = """{ "%s": "%s" }""" % ("url", self.short_url)
             self.headers = [ x for x in self.headers if x[0] != 'Content-Type' ]  # Clean out the Content-Type header
             self.headers.append(('Content-Type', "application/json"))
@@ -110,11 +119,13 @@ def application(environ, start_response):
     SHORT = str(form.getfirst("short", '')).strip()
     NEW = str(form.getfirst("new_url", '')).strip()
 
-    # Look for HTTP Accept: header, which non-human clients will use to request JSON output
+    # Look for HTTP Accept: header, which non-human clients will use to request JSON/plaintext output
     request_accept = environ.get('HTTP_ACCEPT', "")
     request_accept = [ x for x in request_accept.split(',') if x != '' ]
     if "application/json" in request_accept:
         output.request_json()
+    if "text/plain" in request_accept:
+        output.request_plaintext()
 
     if SHORT:
         # Thwart attempts to access files outside the URL_STORE
